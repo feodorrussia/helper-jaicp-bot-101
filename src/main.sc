@@ -1,49 +1,119 @@
-require: js/functions.js
+// src/main.sc
 
+require: js/functions.js
+require: dicts/stopWords.sc
+
+patterns: 
+    $weatherPattern = (погода|прогноз|weather)
+    $currencyPattern = (курс|валюта|currency|доллар|евро|рубль)
+
+init:
+    // Инициализация глобальных переменных
+    bind("getWeatherData", getWeatherData);
+    bind("getExchangeRates", getExchangeRates);
+    
 theme: /
 
     state: Start
+        q!: $regex</start>
+        q!: $helloPattern
+        script:
+            // Проверяем, есть ли имя пользователя в сессии
+                var currentName = $session.userName;
+                if (currentName) {
+            $reactions.answer("Приветствую, " + currentName + "! Чем могу помочь?");
+                } else {
+            $reactions.answer("Приветствую! Это бот-помощник. Как я могу к вам обращаться?");
+            // Переходим в состояние для сохранения имени
+            $session.go("/SaveUserName");
+                }
+                // Если имя уже есть, просто показываем меню после ответа
+
+    state: SaveUserName
+        a: Пожалуйста, представьтесь.
+        state: AwaitName
+            event: noMatch
+            script:
+                var name = $request.query;
+                // Простая очистка имени от лишних слов и знаков препинания
+                name = name.trim().split(' ')[0];
+                $session.userName = name;
+                $reactions.answer("Отлично, " + name + "! Теперь я могу помочь вам с погодой или курсами валют.");
+                $reactions.transition("/Menu");
+
+    // --- Интенты на глобальных тегах ---
+    state: Hello
+        q!: $helloPattern
+        intent: /HelloIntent
+        script:
+            var currentName = $session.userName;
+            if (currentName) {
+                $reactions.answer("Здравствуйте, " + currentName + "!");
+            } else {
+                $reactions.answer("Здравствуйте!");
+            }
+        go!: /Menu
+
+    state: Weather
+        q!: $weatherPattern
+        intent: /WeatherIntent
+        go!: /WeatherFlow
+
+    state: Currency
+        q!: $currencyPattern
+        intent: /CurrencyIntent
+        go!: /CurrencyFlow
+
+    // --- Состояние для непонятных сообщений ---
+    state: NoMatch
         event: noMatch
-        a: Hello! I am a bot assistant. I can provide weather and currency exchange rate info.
-        a: What can I help you with?
+        a: Извините, я не совсем понял ваш запрос. Я умею говорить о погоде и курсах валют. Давайте начнем заново.
+        go!: /Menu
 
-    state: HelloHandler
-        intent!: /HelloIntent
-        a: Hello! Glad to see you.
-        go: /Start
+    // --- Главное меню ---
+    state: Menu
+        a: Выберите интересующий вас раздел:
+        buttons:
+            "🌤️ Узнать погоду" -> /WeatherFlow
+            "💱 Узнать курс валют" -> /CurrencyFlow
+            "❌ Выйти из меню"
+        state: NoMatch
+            event: noMatch
+            a: Пожалуйста, используйте кнопки для навигации.
 
-    state: WeatherHandler
-        intent!: /WeatherIntent
-        a: Please tell me the name of your city.
+    // --- Блок погоды ---
+    state: WeatherFlow
+        a: Пожалуйста, напишите название города.
         state: AwaitCity
             event: noMatch
             script:
                 var city = $request.query;
-                $session.city = city;
-                getWeather(city);
-            if: $session.weatherData
-                script:
-                    var data = $session.weatherData;
-                    var description = getWeatherDescription(data.code);
-                a: Weather in {{$session.city}}: {{data.temp}}°C, {{description}}.
-            else:
-                a: Sorry, could not get weather for {{$session.city}}.
-            go: /Start
+                $session.weatherCity = city;
+                // Вызываем функцию получения данных
+                getWeatherData(city);
+                if ($session.weatherData) {
+                    var wData = $session.weatherData;
+                    $reactions.answer("Погода в городе " + city + ":\n" + 
+                                       "Температура: " + wData.temp + "°C\n" +
+                                       "Описание: " + wData.description);
+                } else {
+                    $reactions.answer("Не удалось получить данные о погоде для города " + city + ". Попробуйте другой город.");
+                }
+                $reactions.transition("/Menu");
+        state: NoMatch
+            event: noMatch
+            a: Пожалуйста, введите название города текстом.
 
-    state: CurrencyHandler
-        intent!: /CurrencyIntent
+    // --- Блок валют ---
+    state: CurrencyFlow
         script:
-            getCurrency();
-        if: $session.currencyData
-            script:
-                var rates = $session.currencyData;
-            a: Current exchange rates:
-            a: USD to RUB: {{rates.USD}}
-            a: EUR to RUB: {{rates.EUR}}
-        else:
-            a: Sorry, cannot get exchange rates right now.
-        go: /Start
-
-    state: Fallback
-        event: noMatch
-        a: I did not understand. Please use the menu or ask about weather or currency.
+            getExchangeRates();
+            if ($session.ratesData) {
+                var rates = $session.ratesData;
+                $reactions.answer("Актуальные курсы валют:\n" +
+                                   "USD/RUB: " + rates.USD + "\n" +
+                                   "EUR/RUB: " + rates.EUR);
+            } else {
+                $reactions.answer("Не удалось получить актуальные курсы валют. Попробуйте позже.");
+            }
+        go!: /Menu

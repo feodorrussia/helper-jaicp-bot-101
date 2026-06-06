@@ -1,44 +1,52 @@
-function getWeather(city) {
+// src/js/functions.js
+
+// Функция для получения данных о погоде
+function getWeatherData(city) {
+    // Используем встроенный сервис $http для GET-запроса
     var response = $http.get("https://api.open-meteo.com/v1/forecast", {
-        "latitude": 55.7558,
-        "longitude": 37.6173,
-        "current_weather": true
+        "latitude": 55.7558,  // Можно заменить на реальные координаты города через отдельный API
+        "longitude": 37.6173, // Например, через сервис геокодинга
+        "current_weather": true,
+        "hourly": "temperature_2m,weathercode"
     });
+    
     if (response && response.current_weather) {
         var data = response.current_weather;
         $session.weatherData = {
             "temp": data.temperature,
-            "code": data.weathercode
+            "description": getWeatherDescription(data.weathercode) // Функция для описания погоды по коду
         };
     } else {
         $session.weatherData = null;
     }
 }
 
-function getCurrency() {
+// Функция для получения курсов валют
+function getExchangeRates() {
     var response = $http.get("https://api.exchangerate-api.com/v4/latest/USD");
+    
     if (response && response.rates) {
-        var rates = response.rates;
-        $session.currencyData = {
-            "USD": rates.RUB,
-            "EUR": rates.RUB / rates.EUR
+        $session.ratesData = {
+            "USD": response.rates.RUB,
+            "EUR": response.rates.RUB / response.rates.EUR // Более точный расчет
         };
     } else {
-        $session.currencyData = null;
+        $session.ratesData = null;
     }
 }
 
+// Вспомогательная функция для описания погоды по коду
 function getWeatherDescription(code) {
-    var map = {
-        0: "Clear sky",
-        1: "Mainly clear",
-        2: "Partly cloudy",
-        3: "Overcast",
-        45: "Foggy",
-        51: "Light drizzle",
-        61: "Slight rain",
-        63: "Moderate rain",
-        80: "Showers"
+    var weatherCodes = {
+        0: "Ясно",
+        1: "Преимущественно ясно",
+        2: "Переменная облачность",
+        3: "Пасмурно",
+        45: "Туман",
+        51: "Легкая морось",
+        61: "Небольшой дождь",
+        63: "Дождь",
+        80: "Ливень"
     };
-    return map[code] || "Unknown";
+    return weatherCodes[code] || "Неизвестно";
 }
