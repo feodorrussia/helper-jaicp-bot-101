@@ -8,7 +8,6 @@ patterns:
     $currencyPattern = (курс|валюта|currency|доллар|евро|рубль)
 
 init:
-    // Инициализация глобальных переменных
     bind("getWeatherData", getWeatherData);
     bind("getExchangeRates", getExchangeRates);
     
@@ -19,15 +18,15 @@ theme: /
         q!: $helloPattern
         script:
             // Проверяем, есть ли имя пользователя в сессии
-                var currentName = $session.userName;
-                if (currentName) {
-            $reactions.answer("Приветствую, " + currentName + "! Чем могу помочь?");
-                } else {
-            $reactions.answer("Приветствую! Это бот-помощник. Как я могу к вам обращаться?");
-            // Переходим в состояние для сохранения имени
-            $session.go("/SaveUserName");
-                }
-                // Если имя уже есть, просто показываем меню после ответа
+            var currentName = $session.userName;
+            if (currentName) {
+                $reactions.answer("Приветствую, " + currentName + "! Чем могу помочь?");
+            } else {
+                $reactions.answer("Приветствую! Это бот-помощник. Как я могу к вам обращаться?");
+                // Переходим в состояние для сохранения имени
+                $session.go("/SaveUserName");
+            }
+            // Если имя уже есть, просто показываем меню после ответа
 
     state: SaveUserName
         a: Пожалуйста, представьтесь.
@@ -41,7 +40,6 @@ theme: /
                 $reactions.answer("Отлично, " + name + "! Теперь я могу помочь вам с погодой или курсами валют.");
                 $reactions.transition("/Menu");
 
-    // --- Интенты на глобальных тегах ---
     state: Hello
         q!: $helloPattern
         intent: /HelloIntent
@@ -64,13 +62,11 @@ theme: /
         intent: /CurrencyIntent
         go!: /CurrencyFlow
 
-    // --- Состояние для непонятных сообщений ---
     state: NoMatch
         event: noMatch
         a: Извините, я не совсем понял ваш запрос. Я умею говорить о погоде и курсах валют. Давайте начнем заново.
         go!: /Menu
 
-    // --- Главное меню ---
     state: Menu
         a: Выберите интересующий вас раздел:
         buttons:
@@ -81,7 +77,6 @@ theme: /
             event: noMatch
             a: Пожалуйста, используйте кнопки для навигации.
 
-    // --- Блок погоды ---
     state: WeatherFlow
         a: Пожалуйста, напишите название города.
         state: AwaitCity
@@ -104,7 +99,6 @@ theme: /
             event: noMatch
             a: Пожалуйста, введите название города текстом.
 
-    // --- Блок валют ---
     state: CurrencyFlow
         script:
             getExchangeRates();
