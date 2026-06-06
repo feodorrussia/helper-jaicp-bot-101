@@ -1,0 +1,18 @@
+{
+  "positions" : [ {
+    "id" : "/HelloIntent",
+    "name" : "HelloIntent",
+    "x" : 170,
+    "y" : 518
+  }, {
+    "id" : "/WeatherIntent",
+    "name" : "WeatherIntent",
+    "x" : 1138,
+    "y" : 741
+  }, {
+    "id" : "/CurrencyIntent",
+    "name" : "CurrencyIntent",
+    "x" : 676,
+    "y" : 641
+  } ]
+}
